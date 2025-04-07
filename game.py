@@ -6,7 +6,7 @@ import queue
 # Game settings
 SCREEN_WIDTH, SCREEN_HEIGHT = 640, 480
 PLAYER_SIZE = 50
-MOVE_DISTANCE = 10
+MOVE_DISTANCE = 50
 
 # Initialize Pygame
 pygame.init()

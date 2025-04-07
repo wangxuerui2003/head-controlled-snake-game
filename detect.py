@@ -9,7 +9,13 @@ import matplotlib.pyplot as plt
 import threading
 import queue
 from collections import deque
+import socket
 import time
+
+HOST = "127.0.0.1"  # Standard loopback interface address (localhost)
+PORT = 9999
+GAME_SOCK = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+GAME_SOCK.connect((HOST, PORT))
 
 
 def draw_landmarks_on_image(rgb_image, detection_result):
@@ -148,14 +154,15 @@ def detect_head_facing_direction(image):
         print("Head direction:", ", ".join(directions))
         print(f"Pitch: {pitch:.2f}°, Yaw: {yaw:.2f}°, Roll: {roll:.2f}°")
 
-        result_queue.put((pitch, yaw, roll))
+        result_queue.put(directions)
     else:
-        result_queue.put(None)
+        result_queue.put(["Forward"])
 
 
 # Worker function for the processing thread
 def process_frames():
     while True:
+        time.sleep(0.2)
         try:
             frame = frame_queue.get_nowait()
         except queue.Empty:
@@ -176,6 +183,15 @@ def process_frames():
 
 # plot_face_blendshapes_bar_graph(detection_result.face_blendshapes[0])
 
+
+def send_direction_to_game(direction: str):
+    try:
+        GAME_SOCK.sendall(f"{direction}\n".encode("utf-8"))
+        print(f"Sent: {direction}")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+
 if __name__ == "__main__":
     frame_queue = queue.Queue(maxsize=1)  # Only process latest frame
     result_queue = queue.Queue(maxsize=1)
@@ -191,18 +207,15 @@ if __name__ == "__main__":
     processing_thread.start()
 
     while True:
-        # time.sleep(0.1)
         # Capture frame-by-frame
         ret, frame = cap.read()
         if not ret:
             break
 
         try:
-            angles = result_queue.get_nowait()
-            if angles:
-                pitch, yaw, roll = angles
-                # Update your display with these angles
-                # print(f"Pitch: {pitch:.1f}°, Yaw: {yaw:.1f}°, Roll: {roll:.1f}°")
+            directions = result_queue.get_nowait()
+            for dir in directions:
+                send_direction_to_game(dir)
         except queue.Empty:
             pass
 
