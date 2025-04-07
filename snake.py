@@ -3,12 +3,21 @@ import pygame
 import socket
 import threading
 import queue
+import sys
+
+pygame.init()
 
 width = 500
 height = 500
 
 cols = 25
 rows = 20
+
+win = pygame.display.set_mode((width, height))
+pygame.display.set_caption("Snake Game")
+
+font = pygame.font.SysFont("comicsans", 30)
+
 
 # Thread-safe queue to store commands received from TCP socket
 command_queue = queue.Queue()
@@ -92,7 +101,7 @@ class Cube:
             pygame.draw.circle(surface, (0, 0, 0), circleMiddle2, radius)
 
 
-class snake:
+class Snake:
     body = []
     turns = {}
 
@@ -215,11 +224,85 @@ def randomSnack(rows, item):
     return (x, y)
 
 
+def draw_text(text, font, color, surface, pos):
+    textobj = font.render(text, True, color)
+    surface.blit(textobj, pos)
+
+
+def start_menu():
+    """Display a start menu until the player presses a key."""
+    running = True
+    while running:
+        win.fill((0, 0, 0))
+        draw_text(
+            "Press any key to start",
+            font,
+            (255, 255, 255),
+            win,
+            (width // 2 - 150, height // 2),
+        )
+        pygame.display.update()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.KEYDOWN:
+                running = False
+
+
+def game_over_screen(score):
+    """Display game over screen with the current score and a restart button."""
+    over_font = pygame.font.SysFont("comicsans", 50)
+    button_font = pygame.font.SysFont("comicsans", 30)
+
+    # Button dimensions
+    button_width, button_height = 150, 50
+    button_rect = pygame.Rect(
+        width // 2 - button_width // 2, height // 2 + 40, button_width, button_height
+    )
+
+    waiting = True
+    while waiting:
+        win.fill((0, 0, 0))
+        draw_text(
+            "Game Over!",
+            over_font,
+            (255, 0, 0),
+            win,
+            (width // 2 - 120, height // 2 - 100),
+        )
+        draw_text(
+            "Score: " + str(score),
+            font,
+            (255, 255, 255),
+            win,
+            (width // 2 - 60, height // 2 - 50),
+        )
+
+        # Draw Restart button
+        pygame.draw.rect(win, (0, 255, 0), button_rect)
+        draw_text(
+            "Restart",
+            button_font,
+            (0, 0, 0),
+            win,
+            (button_rect.x + 20, button_rect.y + 10),
+        )
+
+        pygame.display.update()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if button_rect.collidepoint(event.pos):
+                    waiting = False
+
+
 def main():
     global s, snack, win
-    win = pygame.display.set_mode((width, height))
-    s = snake((255, 0, 0), (10, 10))
-    # s.addCube()
+    s = Snake((255, 0, 0), (10, 10))
     snack = Cube(randomSnack(rows, s), color=(0, 255, 0))
     flag = True
     clock = pygame.time.Clock()
@@ -231,15 +314,21 @@ def main():
         headPos = s.head.pos
         if headPos[0] >= 20 or headPos[0] < 0 or headPos[1] >= 20 or headPos[1] < 0:
             print("Score:", len(s.body))
+            game_over_screen(len(s.body))
+            # Reset snake and snack after game over
             s.reset((10, 10))
+            snack = Cube(randomSnack(rows, s), color=(0, 255, 0))
+            continue
 
         if s.body[0].pos == snack.pos:
             s.addCube()
             snack = Cube(randomSnack(rows, s), color=(0, 255, 0))
+            score = len(s.body)
 
         for x in range(len(s.body)):
             if s.body[x].pos in list(map(lambda z: z.pos, s.body[x + 1 :])):
                 print("Score:", len(s.body))
+                game_over_screen(len(s.body))
                 s.reset((10, 10))
                 break
 
@@ -247,4 +336,6 @@ def main():
 
 
 if __name__ == "__main__":
+    start_menu()
     main()
+    pygame.quit()
