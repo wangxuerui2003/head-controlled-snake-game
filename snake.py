@@ -1,4 +1,3 @@
-import math
 import random
 import pygame
 import socket
@@ -34,25 +33,26 @@ def tcp_server(host="localhost", port=8899):
         server_socket.listen(1)
         print(f"Server listening on {host}:{port}")
 
-        client_socket, addr = server_socket.accept()
-        print(f"Connection from {addr}")
+        while True:
+            client_socket, addr = server_socket.accept()
+            print(f"Connection from {addr}")
 
-        with client_socket:
-            buffer = ""
-            while True:
-                data = client_socket.recv(1024)
-                if not data:
-                    break
-                buffer += data.decode("utf-8")
-                # Process any complete command lines
-                while "\n" in buffer:
-                    line, buffer = buffer.split("\n", 1)
-                    command = line.strip().lower()
-                    if command in ["left", "right", "up", "down"]:
-                        command_queue.put(command)
-                        simulate_key_press(arrows_map[command])
-                        print(f"Command received: {command}")
-        print("Client disconnected.")
+            with client_socket:
+                buffer = ""
+                while True:
+                    data = client_socket.recv(1024)
+                    if not data:
+                        break
+                    buffer += data.decode("utf-8")
+                    # Process any complete command lines
+                    while "\n" in buffer:
+                        line, buffer = buffer.split("\n", 1)
+                        command = line.strip().lower()
+                        if command in ["left", "right", "up", "down"]:
+                            command_queue.put(command)
+                            simulate_key_press(arrows_map[command])
+                            print(f"Command received: {command}")
+            print("Client disconnected.")
 
 
 # Start the TCP server in a separate thread
@@ -246,4 +246,5 @@ def main():
         redrawWindow()
 
 
-main()
+if __name__ == "__main__":
+    main()
