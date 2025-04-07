@@ -101,8 +101,8 @@ class snake:
         self.color = color
         self.head = Cube(pos)
         self.body.append(self.head)
-        self.dirnx = 0
-        self.dirny = 1
+        self.dirnx = 1
+        self.dirny = 0
 
     def move(self):
         for event in pygame.event.get():
@@ -114,19 +114,25 @@ class snake:
                 command = command_queue.get()
 
             if event.type == pygame.KEYDOWN or command is not None:
-                if event.key == pygame.K_LEFT or command == "left":
+                if (
+                    event.key == pygame.K_LEFT or command == "left"
+                ) and self.dirnx == 0:
                     self.dirnx = -1
                     self.dirny = 0
                     self.turns[self.head.pos[:]] = [self.dirnx, self.dirny]
-                elif event.key == pygame.K_RIGHT or command == "right":
+                elif (
+                    event.key == pygame.K_RIGHT or command == "right"
+                ) and self.dirnx == 0:
                     self.dirnx = 1
                     self.dirny = 0
                     self.turns[self.head.pos[:]] = [self.dirnx, self.dirny]
-                elif event.key == pygame.K_UP or command == "up":
+                elif (event.key == pygame.K_UP or command == "up") and self.dirny == 0:
                     self.dirny = -1
                     self.dirnx = 0
                     self.turns[self.head.pos[:]] = [self.dirnx, self.dirny]
-                elif event.key == pygame.K_DOWN or command == "down":
+                elif (
+                    event.key == pygame.K_DOWN or command == "down"
+                ) and self.dirny == 0:
                     self.dirny = 1
                     self.dirnx = 0
                     self.turns[self.head.pos[:]] = [self.dirnx, self.dirny]
@@ -146,8 +152,8 @@ class snake:
         self.body = []
         self.body.append(self.head)
         self.turns = {}
-        self.dirnx = 0
-        self.dirny = 1
+        self.dirnx = 1
+        self.dirny = 0
 
     def addCube(self):
         tail = self.body[-1]
@@ -213,14 +219,14 @@ def main():
     global s, snack, win
     win = pygame.display.set_mode((width, height))
     s = snake((255, 0, 0), (10, 10))
-    s.addCube()
+    # s.addCube()
     snack = Cube(randomSnack(rows, s), color=(0, 255, 0))
     flag = True
     clock = pygame.time.Clock()
 
     while flag:
-        pygame.time.delay(300)
-        clock.tick(10)
+        pygame.time.delay(10)
+        clock.tick(4)
         s.move()
         headPos = s.head.pos
         if headPos[0] >= 20 or headPos[0] < 0 or headPos[1] >= 20 or headPos[1] < 0:
