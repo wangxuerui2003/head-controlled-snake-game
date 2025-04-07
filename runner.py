@@ -1,8 +1,10 @@
+import os
 import subprocess
 
-# Run snake.py in the background
-subprocess.Popen(["python", "snake.py"])
+devnull = open(
+    os.devnull, "w"
+)  # os.devnull is 'nul' on Windows and '/dev/null' on Unix
 
-# Run detect.py in the background, suppressing stderr
-with open("/dev/null", "w") as devnull:
-    subprocess.Popen(["python", "detect.py"], stderr=devnull)
+# Run both scripts in background
+subprocess.Popen(["python", "snake.py"])
+subprocess.Popen(["python", "detect.py"], stderr=devnull)
