@@ -13,9 +13,8 @@ import socket
 import time
 
 HOST = "127.0.0.1"  # Standard loopback interface address (localhost)
-PORT = 9999
+PORT = 8899
 GAME_SOCK = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-GAME_SOCK.connect((HOST, PORT))
 
 
 def draw_landmarks_on_image(rgb_image, detection_result):
@@ -162,7 +161,7 @@ def detect_head_facing_direction(image):
 # Worker function for the processing thread
 def process_frames():
     while True:
-        time.sleep(0.2)
+        # time.sleep(0.1)
         try:
             frame = frame_queue.get_nowait()
         except queue.Empty:
@@ -184,15 +183,22 @@ def process_frames():
 # plot_face_blendshapes_bar_graph(detection_result.face_blendshapes[0])
 
 
+def connect_to_game():
+    global GAME_SOCK
+    GAME_SOCK.connect((HOST, PORT))
+
+
 def send_direction_to_game(direction: str):
     try:
         GAME_SOCK.sendall(f"{direction}\n".encode("utf-8"))
         print(f"Sent: {direction}")
     except Exception as e:
+        connect_to_game()
         print(f"An error occurred: {e}")
 
 
 if __name__ == "__main__":
+    connect_to_game()
     frame_queue = queue.Queue(maxsize=1)  # Only process latest frame
     result_queue = queue.Queue(maxsize=1)
 
