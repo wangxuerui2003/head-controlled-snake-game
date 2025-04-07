@@ -185,7 +185,11 @@ def process_frames():
 
 def connect_to_game():
     global GAME_SOCK
-    GAME_SOCK.connect((HOST, PORT))
+    try:
+        GAME_SOCK.connect((HOST, PORT))
+    except ConnectionRefusedError:
+        print("Game server not started.")
+        exit(1)
 
 
 def send_direction_to_game(direction: str):
@@ -209,10 +213,14 @@ if __name__ == "__main__":
         exit()
 
     # Start the processing thread
-    processing_thread = threading.Thread(target=process_frames, daemon=True)
+    processing_thread = threading.Thread(target=process_frames)
     processing_thread.start()
 
     while True:
+        # Press 'q' to quit the video stream
+        if cv2.waitKey(1) & 0xFF == ord("q"):
+            break
+
         # Capture frame-by-frame
         ret, frame = cap.read()
         if not ret:
@@ -230,11 +238,9 @@ if __name__ == "__main__":
 
         # Display the resulting frame
         cv2.imshow("Webcam Feed", cv2.flip(frame, 1))
-        # Press 'q' to quit the video stream
-        if cv2.waitKey(1) & 0xFF == ord("q"):
-            break
 
     frame_queue.get_nowait()
     frame_queue.put(None)  # Signal thread to exit
+    processing_thread.join()
     cap.release()
     cv2.destroyAllWindows()
