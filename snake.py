@@ -22,20 +22,9 @@ font = pygame.font.SysFont("comicsans", 30)
 # Thread-safe queue to store commands received from TCP socket
 command_queue = queue.Queue()
 
-arrows_map = {
-    "left": pygame.K_LEFT,
-    "right": pygame.K_RIGHT,
-    "up": pygame.K_UP,
-    "down": pygame.K_DOWN,
-}
-
-
-def simulate_key_press(key):
-    pygame.event.post(pygame.event.Event(pygame.KEYDOWN, key=key))
-    # pygame.event.post(pygame.event.Event(pygame.KEYUP, {"key": key}))
-
 
 def tcp_server(host="localhost", port=8899):
+    last_command = None
     """TCP server that listens for movement commands and puts them into a queue."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
         server_socket.bind((host, port))
@@ -58,8 +47,9 @@ def tcp_server(host="localhost", port=8899):
                         line, buffer = buffer.split("\n", 1)
                         command = line.strip().lower()
                         if command in ["left", "right", "up", "down"]:
-                            command_queue.put(command)
-                            simulate_key_press(arrows_map[command])
+                            if command != last_command:
+                                command_queue.put(command)
+                            last_command = command
                             print(f"Command received: {command}")
             print("Client disconnected.")
 
@@ -118,33 +108,26 @@ class Snake:
             if event.type == pygame.QUIT:
                 pygame.quit()
 
-            command = None
-            if not command_queue.empty():
-                command = command_queue.get()
+        command = None
+        if not command_queue.empty():
+            command = command_queue.get()
 
-            if event.type == pygame.KEYDOWN or command is not None:
-                if (
-                    event.key == pygame.K_LEFT or command == "left"
-                ) and self.dirnx == 0:
-                    self.dirnx = -1
-                    self.dirny = 0
-                    self.turns[self.head.pos[:]] = [self.dirnx, self.dirny]
-                elif (
-                    event.key == pygame.K_RIGHT or command == "right"
-                ) and self.dirnx == 0:
-                    self.dirnx = 1
-                    self.dirny = 0
-                    self.turns[self.head.pos[:]] = [self.dirnx, self.dirny]
-                elif (event.key == pygame.K_UP or command == "up") and self.dirny == 0:
-                    self.dirny = -1
-                    self.dirnx = 0
-                    self.turns[self.head.pos[:]] = [self.dirnx, self.dirny]
-                elif (
-                    event.key == pygame.K_DOWN or command == "down"
-                ) and self.dirny == 0:
-                    self.dirny = 1
-                    self.dirnx = 0
-                    self.turns[self.head.pos[:]] = [self.dirnx, self.dirny]
+        if command == "left" and self.dirnx == 0:
+            self.dirnx = -1
+            self.dirny = 0
+            self.turns[self.head.pos[:]] = [self.dirnx, self.dirny]
+        elif command == "right" and self.dirnx == 0:
+            self.dirnx = 1
+            self.dirny = 0
+            self.turns[self.head.pos[:]] = [self.dirnx, self.dirny]
+        elif command == "up" and self.dirny == 0:
+            self.dirny = -1
+            self.dirnx = 0
+            self.turns[self.head.pos[:]] = [self.dirnx, self.dirny]
+        elif command == "down" and self.dirny == 0:
+            self.dirny = 1
+            self.dirnx = 0
+            self.turns[self.head.pos[:]] = [self.dirnx, self.dirny]
 
         for i, c in enumerate(self.body):
             p = c.pos[:]
@@ -300,6 +283,17 @@ def game_over_screen(score):
                     waiting = False
 
 
+def end_game():
+    while not command_queue.empty():
+        command_queue.get_nowait()
+
+
+def restart_game():
+    while not command_queue.empty():
+        command_queue.get_nowait()
+    s.reset((10, 10))
+
+
 def main():
     global s, snack, win
     s = Snake((255, 0, 0), (10, 10))
@@ -314,9 +308,10 @@ def main():
         headPos = s.head.pos
         if headPos[0] >= 20 or headPos[0] < 0 or headPos[1] >= 20 or headPos[1] < 0:
             print("Score:", len(s.body))
+            end_game()
             game_over_screen(len(s.body))
             # Reset snake and snack after game over
-            s.reset((10, 10))
+            restart_game()
             snack = Cube(randomSnack(rows, s), color=(0, 255, 0))
             continue
 
@@ -328,8 +323,9 @@ def main():
         for x in range(len(s.body)):
             if s.body[x].pos in list(map(lambda z: z.pos, s.body[x + 1 :])):
                 print("Score:", len(s.body))
+                end_game()
                 game_over_screen(len(s.body))
-                s.reset((10, 10))
+                restart_game()
                 break
 
         redrawWindow()

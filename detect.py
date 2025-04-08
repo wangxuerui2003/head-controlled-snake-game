@@ -143,7 +143,7 @@ def detect_head_facing_direction(image):
             directions.append("Left")
         if pitch < -15:
             directions.append("Up")
-        elif pitch > 15:
+        elif pitch > 10:
             directions.append("Down")
 
         # If no significant rotation, consider facing forward
@@ -174,13 +174,16 @@ def process_frames():
         detect_head_facing_direction(mp_image)
 
 
-# # Process the detection result. In this case, visualize it.
-# annotated_image = draw_landmarks_on_image(image.numpy_view(), detection_result)
-# cv2.imshow("Head Pose Detection", cv2.cvtColor(annotated_image, cv2.COLOR_RGB2BGR))
-# cv2.waitKey(0)
-# cv2.destroyAllWindows()
+processing_thread = threading.Thread(target=process_frames)
 
-# plot_face_blendshapes_bar_graph(detection_result.face_blendshapes[0])
+
+def cleanup():
+    if not frame_queue.empty():
+        frame_queue.get_nowait()
+    frame_queue.put(None)  # Signal thread to exit
+    processing_thread.join()
+    cap.release()
+    cv2.destroyAllWindows()
 
 
 def connect_to_game():
@@ -189,6 +192,11 @@ def connect_to_game():
         GAME_SOCK.connect((HOST, PORT))
     except ConnectionRefusedError:
         print("Game server not started.")
+        cleanup()
+        exit(1)
+    except Exception:
+        print("Unknown Error when connecting")
+        cleanup()
         exit(1)
 
 
@@ -197,12 +205,12 @@ def send_direction_to_game(direction: str):
         GAME_SOCK.sendall(f"{direction}\n".encode("utf-8"))
         print(f"Sent: {direction}")
     except Exception as e:
-        connect_to_game()
         print(f"An error occurred: {e}")
+        connect_to_game()
 
 
 if __name__ == "__main__":
-    connect_to_game()
+    global frame_queue, result_queue, cap
     frame_queue = queue.Queue(maxsize=1)  # Only process latest frame
     result_queue = queue.Queue(maxsize=1)
 
@@ -213,8 +221,9 @@ if __name__ == "__main__":
         exit()
 
     # Start the processing thread
-    processing_thread = threading.Thread(target=process_frames)
     processing_thread.start()
+
+    connect_to_game()
 
     while True:
         # Press 'q' to quit the video stream
@@ -239,8 +248,4 @@ if __name__ == "__main__":
         # Display the resulting frame
         cv2.imshow("Webcam Feed", cv2.flip(frame, 1))
 
-    frame_queue.get_nowait()
-    frame_queue.put(None)  # Signal thread to exit
-    processing_thread.join()
-    cap.release()
-    cv2.destroyAllWindows()
+    cleanup()
