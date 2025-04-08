@@ -141,9 +141,9 @@ def detect_head_facing_direction(image):
             directions.append("Right")
         elif yaw > 15:
             directions.append("Left")
-        if pitch < -15:
+        if pitch < -12:
             directions.append("Up")
-        elif pitch > 10:
+        elif pitch > 12:
             directions.append("Down")
 
         # If no significant rotation, consider facing forward

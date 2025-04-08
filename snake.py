@@ -20,7 +20,7 @@ font = pygame.font.SysFont("comicsans", 30)
 
 
 # Thread-safe queue to store commands received from TCP socket
-command_queue = queue.Queue()
+command_queue = queue.Queue(maxsize=10)
 
 
 def tcp_server(host="localhost", port=8899):
